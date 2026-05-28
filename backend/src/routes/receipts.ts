@@ -25,7 +25,7 @@ router.get("/", async (_req, res, next) => {
   try {
     const receipts = await prisma.receipt.findMany({
       orderBy: { createdAt: "desc" },
-      include: { items: true },
+      include: { items: true, category: true },
     });
     res.json({ receipts });
   } catch (e) {
@@ -57,7 +57,7 @@ router.get("/:id", async (req, res, next) => {
   try {
     const receipt = await prisma.receipt.findUnique({
       where: { id: req.params.id },
-      include: { items: true, expense: true },
+      include: { items: true, expense: true, category: true },
     });
     if (!receipt) throw new HttpError(404, "RECEIPT_NOT_FOUND");
     res.json({ receipt });
@@ -129,6 +129,8 @@ const patchSchema = z.object({
   vendor: z.string().optional(),
   totalAmount: z.number().int().nonnegative().optional(),
   purchasedAt: z.coerce.date().optional(),
+  // null 을 명시적으로 보내면 카테고리 해제
+  categoryId: z.string().nullable().optional(),
 });
 
 router.patch("/:id", async (req, res, next) => {
@@ -142,6 +144,7 @@ router.patch("/:id", async (req, res, next) => {
     const updated = await prisma.receipt.update({
       where: { id: existing.id },
       data,
+      include: { items: true, category: true },
     });
     res.json({ receipt: updated });
   } catch (e) {

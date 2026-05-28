@@ -56,6 +56,7 @@ export interface ReceiptPatchInput {
   vendor?: string;
   totalAmount?: number;
   purchasedAt?: string; // ISO date
+  categoryId?: string | null;
 }
 
 export function useUpdateReceipt(id: string) {

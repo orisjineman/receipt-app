@@ -16,6 +16,13 @@ export interface ReceiptItem {
   amount: number;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  color: string;
+  icon: string | null;
+}
+
 export interface Receipt {
   id: string;
   imageUrl: string;
@@ -26,6 +33,8 @@ export interface Receipt {
   currency: string;
   purchasedAt: string | null; // ISO string
   ocrError: string | null;
+  categoryId: string | null;
+  category?: Category | null;
   createdAt: string;
   updatedAt: string;
   items?: ReceiptItem[];

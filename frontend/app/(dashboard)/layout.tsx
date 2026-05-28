@@ -19,9 +19,6 @@ export default function DashboardLayout({
           <Link href="/upload" className="rounded px-3 py-2 hover:bg-slate-100">
             영수증 업로드
           </Link>
-          <Link href="/expenses" className="rounded px-3 py-2 hover:bg-slate-100">
-            지출 내역
-          </Link>
           <Link href="/categories" className="rounded px-3 py-2 hover:bg-slate-100">
             카테고리
           </Link>

@@ -15,18 +15,21 @@ import {
   useUpdateReceipt,
   useDeleteReceipt,
 } from "@/lib/hooks/receipts";
+import { useCategories } from "@/lib/hooks/categories";
 import { formatKRW, formatDate } from "@/lib/utils";
 
 export default function ReceiptDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { data: receipt, isLoading, isError, error } = useReceipt(id);
+  const { data: categories } = useCategories();
   const update = useUpdateReceipt(id);
   const del = useDeleteReceipt();
 
   const [vendor, setVendor] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
   const [purchasedAt, setPurchasedAt] = useState("");
+  const [categoryId, setCategoryId] = useState<string>("");
 
   // 서버 값으로 폼 초기화
   useEffect(() => {
@@ -38,6 +41,7 @@ export default function ReceiptDetailPage() {
         ? new Date(receipt.purchasedAt).toISOString().slice(0, 10)
         : "",
     );
+    setCategoryId(receipt.categoryId ?? "");
   }, [receipt]);
 
   if (isLoading) {
@@ -63,13 +67,15 @@ export default function ReceiptDetailPage() {
     purchasedAt !==
       (receipt.purchasedAt
         ? new Date(receipt.purchasedAt).toISOString().slice(0, 10)
-        : "");
+        : "") ||
+    categoryId !== (receipt.categoryId ?? "");
 
   async function onSave() {
     const data: {
       vendor?: string;
       totalAmount?: number;
       purchasedAt?: string;
+      categoryId?: string | null;
     } = {};
     if (vendor !== (receipt!.vendor ?? "")) data.vendor = vendor;
     if (totalAmount !== (receipt!.totalAmount?.toString() ?? "")) {
@@ -84,6 +90,9 @@ export default function ReceiptDetailPage() {
           : "")
     ) {
       data.purchasedAt = new Date(purchasedAt).toISOString();
+    }
+    if (categoryId !== (receipt!.categoryId ?? "")) {
+      data.categoryId = categoryId === "" ? null : categoryId;
     }
     await update.mutateAsync(data);
   }
@@ -172,6 +181,39 @@ export default function ReceiptDetailPage() {
               onChange={(e) => setPurchasedAt(e.target.value)}
               className="w-full rounded-md border bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
             />
+          </Field>
+
+          <Field label="카테고리">
+            <div className="flex items-center gap-2">
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="flex-1 rounded-md border bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+              >
+                <option value="">(미지정)</option>
+                {categories?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {categoryId &&
+                categories?.find((c) => c.id === categoryId) && (
+                  <span
+                    className="h-4 w-4 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor: categories.find(
+                        (c) => c.id === categoryId,
+                      )!.color,
+                    }}
+                  />
+                )}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">
+              <Link href="/categories" className="hover:underline">
+                카테고리 관리 →
+              </Link>
+            </div>
           </Field>
 
           <button

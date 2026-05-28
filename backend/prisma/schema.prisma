@@ -36,6 +36,9 @@ model Receipt {
   currency     String     @default("KRW")
   purchasedAt  DateTime?
 
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   // Upstage Document OCR 원본 응답 (JSON)
   ocrRaw   Json?
   ocrError String?
@@ -47,6 +50,7 @@ model Receipt {
   updatedAt DateTime @updatedAt
 
   @@index([createdAt(sort: Desc)])
+  @@index([categoryId])
 }
 
 model ReceiptItem {
@@ -66,6 +70,7 @@ model Category {
   color String  @default("#94a3b8") // hex
   icon  String? // lucide-react 아이콘 이름
 
+  receipts Receipt[]
   expenses Expense[]
 }
 
