@@ -3,7 +3,11 @@ import multer from "multer";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { basicAuth } from "../middleware/basicAuth";
-import { uploadReceiptImage, deleteReceiptImage } from "../services/blob";
+import {
+  uploadReceiptImage,
+  deleteReceiptImage,
+  getReceiptImageSignedUrl,
+} from "../services/blob";
 import { extractReceiptInfo } from "../services/upstage";
 import { HttpError } from "../middleware/error";
 
@@ -24,6 +28,25 @@ router.get("/", async (_req, res, next) => {
       include: { items: true },
     });
     res.json({ receipts });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// GET /receipts/:id/image - private blob signed URL 로 302 redirect
+router.get("/:id/image", async (req, res, next) => {
+  try {
+    const receipt = await prisma.receipt.findUnique({
+      where: { id: req.params.id },
+      select: { imageKey: true, imageUrl: true },
+    });
+    if (!receipt) throw new HttpError(404, "RECEIPT_NOT_FOUND");
+
+    const pathname = receipt.imageKey;
+    if (!pathname) throw new HttpError(404, "IMAGE_NOT_AVAILABLE");
+
+    const signed = await getReceiptImageSignedUrl(pathname);
+    res.redirect(302, signed);
   } catch (e) {
     next(e);
   }

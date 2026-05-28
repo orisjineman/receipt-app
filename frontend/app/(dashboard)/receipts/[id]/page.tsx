@@ -123,9 +123,10 @@ export default function ReceiptDetailPage() {
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         {/* 영수증 이미지 */}
         <div className="rounded-xl border bg-white p-3 shadow-sm">
+          {/* private blob 은 직접 접근 불가. backend 프록시가 signed URL 로 redirect. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={receipt.imageUrl}
+            src={`/backend/api/receipts/${receipt.id}/image`}
             alt="receipt"
             className="w-full rounded-md object-contain"
           />
