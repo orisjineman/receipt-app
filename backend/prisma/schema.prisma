@@ -8,9 +8,12 @@ generator client {
 }
 
 datasource db {
+  // Vercel-Neon 자동 연동이 주는 변수명을 그대로 사용.
+  // pooled URL → 런타임 쿼리용 (PgBouncer 경유)
+  // unpooled URL → 마이그레이션용 (long-lived connection)
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum ReceiptStatus {

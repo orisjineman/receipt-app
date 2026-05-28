@@ -6,7 +6,8 @@ const schema = z.object({
   PORT: z.coerce.number().default(4000),
 
   DATABASE_URL: z.string().min(1),
-  DIRECT_URL: z.string().optional(),
+  // Vercel-Neon 자동 연동 변수명. 마이그레이션 시 prisma가 사용.
+  DATABASE_URL_UNPOOLED: z.string().optional(),
 
   BASIC_AUTH_USER: z.string().min(1),
   BASIC_AUTH_PASSWORD: z.string().min(8),
