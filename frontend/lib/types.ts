@@ -23,6 +23,12 @@ export interface Category {
   icon: string | null;
 }
 
+export interface Setting {
+  id: number;
+  monthlyBudget: number | null;
+  updatedAt: string;
+}
+
 export interface Receipt {
   id: string;
   imageUrl: string;
@@ -35,6 +41,7 @@ export interface Receipt {
   ocrError: string | null;
   categoryId: string | null;
   category?: Category | null;
+  suggestedCategory: string | null;
   createdAt: string;
   updatedAt: string;
   items?: ReceiptItem[];

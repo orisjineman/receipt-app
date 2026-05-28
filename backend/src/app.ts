@@ -8,6 +8,7 @@ import { corsOrigins, env } from "./config/env";
 import receiptsRouter from "./routes/receipts";
 import expensesRouter from "./routes/expenses";
 import categoriesRouter from "./routes/categories";
+import settingsRouter from "./routes/settings";
 import { errorHandler, notFound } from "./middleware/error";
 
 export function createApp() {
@@ -44,6 +45,7 @@ export function createApp() {
   app.use("/api/receipts", receiptsRouter);
   app.use("/api/expenses", expensesRouter);
   app.use("/api/categories", categoriesRouter);
+  app.use("/api/settings", settingsRouter);
 
   app.use(notFound);
   app.use(errorHandler);

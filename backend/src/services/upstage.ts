@@ -11,42 +11,57 @@ import { env } from "../config/env";
 
 const ENDPOINT = "https://api.upstage.ai/v1/information-extraction";
 
-const RECEIPT_SCHEMA = {
-  type: "object",
-  properties: {
-    vendor: {
-      type: "string",
-      description:
-        "영수증 발행 가맹점 이름. 한글 매장명이 있으면 한글을 우선 사용 (예: '뚜레쥬르 강남역점').",
-    },
-    total_amount: {
-      type: "integer",
-      description:
-        "최종 결제 금액. 원 단위 정수, 콤마 없이 (예: 15900). '합계' 또는 '결제 금액'에 해당하는 값.",
-    },
-    purchased_at: {
-      type: "string",
-      description: "구매 일자. ISO 8601 형식 YYYY-MM-DD (예: '2026-05-21').",
-    },
-    items: {
-      type: "array",
-      description: "구매 품목 목록.",
+function buildReceiptSchema(categoryNames: string[]) {
+  const categoryHint =
+    categoryNames.length > 0
+      ? `다음 중 가장 어울리는 카테고리 이름을 정확히 그대로 선택. 적합한 것이 없으면 빈 문자열 또는 새 카테고리명을 자유롭게 제안. 후보: ${categoryNames.join(", ")}`
+      : `이 영수증에 어울리는 일반적 지출 카테고리명 (예: '편의점', '카페', '식당', '교통', '쇼핑'). 한국어로 짧게.`;
+
+  return {
+    type: "object",
+    properties: {
+      vendor: {
+        type: "string",
+        description:
+          "영수증 발행 가맹점 이름. 한글 매장명이 있으면 한글을 우선 사용 (예: '뚜레쥬르 강남역점').",
+      },
+      total_amount: {
+        type: "integer",
+        description:
+          "최종 결제 금액. 원 단위 정수, 콤마 없이 (예: 15900). '합계' 또는 '결제 금액'에 해당하는 값.",
+      },
+      purchased_at: {
+        type: "string",
+        description:
+          "구매 일자. ISO 8601 형식 YYYY-MM-DD (예: '2026-05-21').",
+      },
+      suggested_category: {
+        type: "string",
+        description: categoryHint,
+      },
       items: {
-        type: "object",
-        properties: {
-          name: { type: "string", description: "상품명" },
-          quantity: { type: "integer", description: "수량" },
-          unit_price: { type: "integer", description: "단가 (원, 콤마 없이)" },
-          amount: {
-            type: "integer",
-            description: "라인 합계 금액 (원, 콤마 없이)",
+        type: "array",
+        description: "구매 품목 목록.",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "상품명" },
+            quantity: { type: "integer", description: "수량" },
+            unit_price: {
+              type: "integer",
+              description: "단가 (원, 콤마 없이)",
+            },
+            amount: {
+              type: "integer",
+              description: "라인 합계 금액 (원, 콤마 없이)",
+            },
           },
         },
       },
     },
-  },
-  required: ["vendor", "total_amount"],
-} as const;
+    required: ["vendor", "total_amount"],
+  } as const;
+}
 
 export interface ExtractedReceiptItem {
   name: string | null;
@@ -59,15 +74,17 @@ export interface ExtractedReceipt {
   vendor: string | null;
   totalAmount: number | null;
   purchasedAt: Date | null;
+  suggestedCategory: string | null;
   items: ExtractedReceiptItem[];
   raw: unknown;
 }
 
-export async function extractReceiptInfo(file: {
-  buffer: Buffer;
-  mimetype: string;
-}): Promise<ExtractedReceipt> {
+export async function extractReceiptInfo(
+  file: { buffer: Buffer; mimetype: string },
+  categoryNames: string[] = [],
+): Promise<ExtractedReceipt> {
   const dataUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+  const schema = buildReceiptSchema(categoryNames);
 
   const { data } = await axios.post(
     ENDPOINT,
@@ -83,7 +100,7 @@ export async function extractReceiptInfo(file: {
         type: "json_schema",
         json_schema: {
           name: "receipt_schema",
-          schema: RECEIPT_SCHEMA,
+          schema,
         },
       },
     },
@@ -124,6 +141,11 @@ export function parseExtractionResponse(data: unknown): ExtractedReceipt {
       }))
     : [];
 
+  const suggested =
+    typeof extracted.suggested_category === "string"
+      ? extracted.suggested_category.trim()
+      : null;
+
   return {
     vendor: typeof extracted.vendor === "string" ? extracted.vendor : null,
     totalAmount: Number.isFinite(extracted.total_amount)
@@ -133,6 +155,7 @@ export function parseExtractionResponse(data: unknown): ExtractedReceipt {
       typeof extracted.purchased_at === "string"
         ? parseDateLoose(extracted.purchased_at)
         : null,
+    suggestedCategory: suggested || null,
     items,
     raw: data,
   };

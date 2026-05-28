@@ -39,6 +39,10 @@ model Receipt {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
+  // Upstage Information Extraction이 추정한 카테고리명 (사용자 카테고리에
+  // 자동 매칭되지 않으면 텍스트만 보관; "이 카테고리로 만들기" UI 에서 사용)
+  suggestedCategory String?
+
   // Upstage Document OCR 원본 응답 (JSON)
   ocrRaw   Json?
   ocrError String?
@@ -72,6 +76,13 @@ model Category {
 
   receipts Receipt[]
   expenses Expense[]
+}
+
+// 단일 row 설정 (전체 월 예산 등). id 는 항상 1.
+model Setting {
+  id            Int      @id @default(1)
+  monthlyBudget Int?     // 원 단위. null = 미설정
+  updatedAt     DateTime @updatedAt
 }
 
 model Expense {

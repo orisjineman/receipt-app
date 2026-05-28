@@ -84,8 +84,24 @@ router.post("/", upload.single("image"), async (req, res, next) => {
     });
 
     // 3) Upstage Information Extraction (JSON Schema 기반 구조화 추출)
+    //    사용자 카테고리 목록을 함께 보내서 LLM 이 그 중 하나를 제안하게 함
     try {
-      const extracted = await extractReceiptInfo(req.file);
+      const categories = await prisma.category.findMany({
+        select: { id: true, name: true },
+      });
+      const extracted = await extractReceiptInfo(
+        req.file,
+        categories.map((c) => c.name),
+      );
+
+      // suggestedCategory 가 기존 카테고리명과 정확히 일치하면 자동 할당
+      const matched = extracted.suggestedCategory
+        ? categories.find(
+            (c) =>
+              c.name.toLowerCase() ===
+              extracted.suggestedCategory!.toLowerCase(),
+          )
+        : null;
 
       const updated = await prisma.receipt.update({
         where: { id: created.id },
@@ -94,6 +110,8 @@ router.post("/", upload.single("image"), async (req, res, next) => {
           vendor: extracted.vendor,
           totalAmount: extracted.totalAmount,
           purchasedAt: extracted.purchasedAt,
+          suggestedCategory: extracted.suggestedCategory,
+          categoryId: matched?.id,
           ocrRaw: extracted.raw as object,
           items: {
             create: extracted.items
@@ -106,7 +124,7 @@ router.post("/", upload.single("image"), async (req, res, next) => {
               })),
           },
         },
-        include: { items: true },
+        include: { items: true, category: true },
       });
       res.status(201).json({ receipt: updated });
     } catch (ocrErr) {

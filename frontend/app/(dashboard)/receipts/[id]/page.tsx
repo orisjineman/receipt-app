@@ -9,13 +9,17 @@ import {
   Save,
   Loader2,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import {
   useReceipt,
   useUpdateReceipt,
   useDeleteReceipt,
 } from "@/lib/hooks/receipts";
-import { useCategories } from "@/lib/hooks/categories";
+import {
+  useCategories,
+  useCreateCategory,
+} from "@/lib/hooks/categories";
 import { formatKRW, formatDate } from "@/lib/utils";
 
 export default function ReceiptDetailPage() {
@@ -25,6 +29,7 @@ export default function ReceiptDetailPage() {
   const { data: categories } = useCategories();
   const update = useUpdateReceipt(id);
   const del = useDeleteReceipt();
+  const createCategory = useCreateCategory();
 
   const [vendor, setVendor] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
@@ -209,6 +214,38 @@ export default function ReceiptDetailPage() {
                   />
                 )}
             </div>
+
+            {/* AI 추천 카테고리 (기존 카테고리에 없을 때만 노출) */}
+            {receipt.suggestedCategory &&
+              !categories?.some(
+                (c) =>
+                  c.name.toLowerCase() ===
+                  receipt.suggestedCategory!.toLowerCase(),
+              ) && (
+                <div className="mt-2 flex items-center gap-2 rounded-md border border-brand-500/30 bg-brand-50 px-3 py-2 text-xs">
+                  <Sparkles className="h-3.5 w-3.5 text-brand-600" />
+                  <span className="text-slate-700">
+                    AI 추천:{" "}
+                    <b className="text-brand-700">
+                      {receipt.suggestedCategory}
+                    </b>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={createCategory.isPending}
+                    onClick={async () => {
+                      const created = await createCategory.mutateAsync({
+                        name: receipt.suggestedCategory!,
+                      });
+                      setCategoryId(created.category.id);
+                    }}
+                    className="ml-auto rounded bg-brand-600 px-2 py-1 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                  >
+                    이 카테고리 만들기
+                  </button>
+                </div>
+              )}
+
             <div className="mt-1 text-xs text-slate-500">
               <Link href="/categories" className="hover:underline">
                 카테고리 관리 →
