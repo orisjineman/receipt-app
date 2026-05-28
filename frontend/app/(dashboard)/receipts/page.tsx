@@ -53,7 +53,10 @@ export default function ReceiptsListPage() {
     return arr;
   }, [receipts, categoryId, period, q]);
 
-  // 카테고리별 합계 (현재 필터 적용 결과 기준)
+  // 카테고리별 합계 (현재 필터 적용 결과 기준).
+  // 차트와 범례가 같은 순서/색상을 쓰도록 한 번만 정렬해서 반환한다.
+  // (이전엔 ul.map 안에서 sort 를 호출했는데, in-place mutation 때문에
+  //  첫 렌더 시 차트는 unsorted, 범례는 sorted 가 되어 색상이 어긋났음.)
   const byCategory = useMemo(() => {
     const map = new Map<string, { name: string; color: string; total: number }>();
     for (const r of filtered) {
@@ -65,7 +68,9 @@ export default function ReceiptsListPage() {
       cur.total += r.totalAmount ?? 0;
       map.set(key, cur);
     }
-    return [...map.entries()].map(([k, v]) => ({ key: k, ...v }));
+    return [...map.entries()]
+      .map(([k, v]) => ({ key: k, ...v }))
+      .sort((a, b) => b.total - a.total);
   }, [filtered]);
 
   const total = filtered.reduce((s, r) => s + (r.totalAmount ?? 0), 0);
@@ -166,25 +171,23 @@ export default function ReceiptsListPage() {
                 </ResponsiveContainer>
               </div>
               <ul className="mt-3 space-y-1 text-xs">
-                {byCategory
-                  .sort((a, b) => b.total - a.total)
-                  .map((c) => (
-                    <li
-                      key={c.key}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: c.color }}
-                        />
-                        {c.name}
-                      </span>
-                      <span className="tabular-nums">
-                        {formatKRW(c.total)}
-                      </span>
-                    </li>
-                  ))}
+                {byCategory.map((c) => (
+                  <li
+                    key={c.key}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: c.color }}
+                      />
+                      {c.name}
+                    </span>
+                    <span className="tabular-nums">
+                      {formatKRW(c.total)}
+                    </span>
+                  </li>
+                ))}
               </ul>
             </>
           )}
