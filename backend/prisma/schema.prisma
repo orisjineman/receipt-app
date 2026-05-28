@@ -1,0 +1,88 @@
+// Prisma schema - 영수증 지출 관리 앱 (단일 사용자 / Basic Auth)
+//
+// 단일 사용자 전제이므로 User/Session/Account 등 인증 관련 모델은 없다.
+// 모든 데이터는 본인 소유이므로 userId 컬럼도 없다.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ReceiptStatus {
+  PENDING     // 업로드만 됨
+  PROCESSING  // OCR 진행 중
+  PARSED      // OCR 성공, 사용자 확인 대기
+  CONFIRMED   // 사용자가 확인하여 Expense로 확정
+  FAILED      // OCR 실패
+}
+
+model Receipt {
+  id        String        @id @default(cuid())
+  imageUrl  String        // Vercel Blob URL
+  imageKey  String?       // Vercel Blob pathname (삭제용)
+  status    ReceiptStatus @default(PENDING)
+
+  // OCR 결과 요약
+  vendor       String?
+  totalAmount  Int?       // 원 단위 정수
+  currency     String     @default("KRW")
+  purchasedAt  DateTime?
+
+  // Upstage Document OCR 원본 응답 (JSON)
+  ocrRaw   Json?
+  ocrError String?
+
+  items   ReceiptItem[]
+  expense Expense?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt(sort: Desc)])
+}
+
+model ReceiptItem {
+  id        String  @id @default(cuid())
+  receiptId String
+  name      String
+  quantity  Int     @default(1)
+  unitPrice Int?
+  amount    Int     // 라인 합계 (원)
+
+  receipt Receipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id    String  @id @default(cuid())
+  name  String  @unique
+  color String  @default("#94a3b8") // hex
+  icon  String? // lucide-react 아이콘 이름
+
+  expenses Expense[]
+}
+
+model Expense {
+  id         String   @id @default(cuid())
+  receiptId  String?  @unique
+  categoryId String?
+
+  amount   Int      // 원 단위
+  currency String   @default("KRW")
+  vendor   String?
+  memo     String?
+  spentAt  DateTime
+
+  receipt  Receipt?  @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([spentAt(sort: Desc)])
+  @@index([categoryId])
+}
