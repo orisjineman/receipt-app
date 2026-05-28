@@ -29,13 +29,24 @@ export async function api<T = unknown>(
   });
 
   if (!res.ok) {
-    let body: unknown;
+    // Response body stream 은 한 번만 읽을 수 있으므로 text 로 받은 뒤
+    // JSON 파싱을 시도한다. (이전엔 .json() 실패 후 .text() 호출 시
+    // "body stream already read" 가 발생하여 진짜 에러가 가려졌음.)
+    const raw = await res.text();
+    let body: unknown = raw;
     try {
-      body = await res.json();
+      body = JSON.parse(raw);
     } catch {
-      body = await res.text();
+      // not JSON — keep raw text
     }
-    throw new ApiError(res.status, `API ${res.status}`, body);
+    const inner =
+      body && typeof body === "object" && "error" in body
+        ? String((body as { error?: unknown }).error ?? "")
+        : "";
+    const message = inner
+      ? `API ${res.status}: ${inner}`
+      : `API ${res.status}`;
+    throw new ApiError(res.status, message, body);
   }
 
   if (res.status === 204) return undefined as T;
